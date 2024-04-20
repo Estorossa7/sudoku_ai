@@ -1,6 +1,7 @@
 from agent import Agent
-from game import Sudoku
+from sudoku import Sudoku
 import config as cfg
+from plot import plot
 
 import numpy as np
 import pandas as pd
@@ -37,19 +38,25 @@ def train(df):
         board = df.iloc[idx, 0]
         ans = df.iloc[idx, 1]
         observation = env.reset(board,ans)
-        score = 0
-        round = 0
+        score = max_score = 0
+        round = max_round = 0
+        
         while not done:
             round +=1
             action = agent.choose_action(observation)
             observation_, reward, done = env.step(action)
-            if not done:
-                reward += round
+            #if not done:
+            #    reward += round
             score += reward
             agent.store_transition(observation,action,reward,observation_,int(done))
             observation = env.get_board()
+            if round>100:
+                done = True
             
         agent.learn()
+
+        max_round = max(max_round,round)
+        max_score = max(max_score,score)
 
         acc = env.check_acc()
         accs.append(acc)
@@ -73,14 +80,14 @@ def train(df):
         pbar.set_postfix_str(f" avg_score:{avg_score:>0.5f}, avg_round:{avg_round:>0.5f}, avg_acc:{avg_acc:>0.5f}, epsilon:{agent.epsilon:>0.7f}")
 
         if i>1 and i%10000 == 0:
-            print('')
+            print(f"max_round:{max_round}, max_score:{max_score} ")
             agent.save_models(i)
 
         eps_history.append(agent.epsilon)
 
-    #plot(scores,avg_scores,'scores')
-    #plot(rounds,avg_rounds,'rounds')
-    #plot(accs,avg_accs,'accuracy')
+    plot(scores,avg_scores,'scores')
+    plot(rounds,avg_rounds,'rounds')
+    plot(accs,avg_accs,'accuracy')
 #    plot(losses,avg_losses,'loss')
 
 def test(df):
@@ -131,9 +138,9 @@ def test(df):
         #print(f"test board:{i}, score:{score:>0.5f}, rounds:{round:>0.5f}, accs:{acc:>0.5f}")
         pbar.set_postfix_str(f" avg_score:{avg_score:>0.5f}, avg_round:{avg_round:>0.5f}, avg_acc:{avg_acc:>0.5f}")
 
-    #plot(scores,avg_scores,'scores')
-    #plot(rounds,avg_rounds,'rounds')
-    #plot(accs,avg_accs,'accuracy')
+    plot(scores,avg_scores,'scores')
+    plot(rounds,avg_rounds,'rounds')
+    plot(accs,avg_accs,'accuracy')
 
 if __name__=='__main__':
     path = cfg.data_path
